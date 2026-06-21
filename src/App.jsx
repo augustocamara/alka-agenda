@@ -2,11 +2,13 @@ import { useState, useMemo } from 'react'
 import { mKey, today } from './utils'
 import { useDespesas } from './hooks/useDespesas'
 import { useToast } from './hooks/useToast'
+import { useInstall } from './hooks/useInstall'
 import Header from './components/Header'
 import AgendaView from './components/AgendaView'
 import ResumoView from './components/ResumoView'
 import FormDespesa from './components/FormDespesa'
 import ConfirmModal from './components/ConfirmModal'
+import ConfigModal from './components/ConfigModal'
 import Toast from './components/Toast'
 
 function mesPadrao() {
@@ -16,20 +18,22 @@ function mesPadrao() {
 export default function App() {
   const { despesas, carregando, adicionar, adicionarVarias, atualizar, remover, alterarStatus } = useDespesas()
   const { toast, show } = useToast()
+  const { canInstall, install, isStandalone } = useInstall()
 
   const [mes,  setMes]  = useState(mesPadrao)
   const [view, setView] = useState('agenda')
 
-  const [editando, setEditando]   = useState(null)    // despesa sendo editada, ou null = nova
-  const [excluindo, setExcluindo] = useState(null)    // id a excluir
+  const [editando,  setEditando]  = useState(null)
+  const [excluindo, setExcluindo] = useState(null)
+  const [configAberto, setConfigAberto] = useState(false)
 
   // Totais do mês atual
   const todayStr = today()
   const totais = useMemo(() => {
     const doMes = despesas.filter(d => mKey(d.vencimento) === mes)
-    const total     = doMes.reduce((s, d) => s + (d.valor || 0), 0)
-    const totalPago = doMes.filter(d => d.status === 'pago').reduce((s, d) => s + d.valor, 0)
-    const totalPend = doMes.filter(d => d.status !== 'pago').reduce((s, d) => s + d.valor, 0)
+    const total      = doMes.reduce((s, d) => s + (d.valor || 0), 0)
+    const totalPago  = doMes.filter(d => d.status === 'pago').reduce((s, d) => s + d.valor, 0)
+    const totalPend  = doMes.filter(d => d.status !== 'pago').reduce((s, d) => s + d.valor, 0)
     const temAtrasado = doMes.some(d => d.status === 'pendente' && d.vencimento < todayStr)
     return { total, totalPago, totalPend, temAtrasado }
   }, [despesas, mes, todayStr])
@@ -81,6 +85,37 @@ export default function App() {
     show('Despesa excluída', 'info')
   }
 
+  // Importar JSON (vindo do arquivo antigo ou backup)
+  async function handleImportar(novas) {
+    // Evita duplicar ids que já existem
+    const idsAtuais = new Set(despesas.map(d => d.id))
+    const paraAdicionar = novas.filter(d => !idsAtuais.has(d.id))
+    const duplicadas = novas.length - paraAdicionar.length
+
+    if (paraAdicionar.length === 0) {
+      show('Todos os registros já existem.', 'info')
+      return
+    }
+
+    await adicionarVarias(paraAdicionar)
+    const msg = duplicadas > 0
+      ? `${paraAdicionar.length} importadas, ${duplicadas} já existiam`
+      : `${paraAdicionar.length} despesas importadas!`
+    show(msg)
+  }
+
+  // Exportar JSON (backup)
+  function handleExportar() {
+    const blob = new Blob([JSON.stringify(despesas, null, 2)], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `alka-agenda-backup-${today()}.json`
+    a.click()
+    URL.revokeObjectURL(url)
+    show('Backup exportado!')
+  }
+
   if (carregando) {
     return (
       <div style={{ minHeight: '100dvh', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -97,7 +132,9 @@ export default function App() {
         view={view}
         setView={setView}
         onNova={handleNova}
+        onConfig={() => setConfigAberto(true)}
         totais={totais}
+        canInstall={canInstall}
       />
 
       <main style={{ flex: 1, overflowY: 'auto' }}>
@@ -125,6 +162,17 @@ export default function App() {
         aberto={!!excluindo}
         onConfirmar={handleConfirmarExclusao}
         onCancelar={() => setExcluindo(null)}
+      />
+
+      <ConfigModal
+        aberto={configAberto}
+        onFechar={() => setConfigAberto(false)}
+        onImportar={handleImportar}
+        onExportar={handleExportar}
+        canInstall={canInstall}
+        install={install}
+        isStandalone={isStandalone}
+        show={show}
       />
 
       <Toast toast={toast} />

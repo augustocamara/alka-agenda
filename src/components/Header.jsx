@@ -1,23 +1,33 @@
 import { fmt, nomeMes, shiftMes } from '../utils'
 
-export default function Header({ mes, setMes, view, setView, onNova, totais }) {
+export default function Header({ mes, setMes, view, setView, onNova, onConfig, totais, canInstall }) {
   const { total, totalPago, totalPend, temAtrasado } = totais
 
   return (
     <div style={{ background: 'linear-gradient(135deg,#1e293b,#0f172a)', borderBottom: '1px solid #1e293b', padding: '0 20px' }}>
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
 
-        {/* Título + botão nova */}
+        {/* Título + botões */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: 'max(20px, calc(16px + env(safe-area-inset-top))', marginBottom: 16 }}>
           <div>
             <div style={{ fontSize: 10, color: '#64748b', letterSpacing: 2, textTransform: 'uppercase' }}>Alka</div>
             <div style={{ fontSize: 22, fontWeight: 700, color: '#f1f5f9' }}>Agenda</div>
           </div>
-          {view !== 'form' && (
-            <button onClick={onNova} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 18px', fontWeight: 600, cursor: 'pointer', fontSize: 14 }}>
-              + Nova
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            {canInstall && (
+              <button onClick={onConfig} style={{ background: '#6366f122', color: '#6366f1', border: '1px solid #6366f155', borderRadius: 10, padding: '8px 12px', fontWeight: 600, cursor: 'pointer', fontSize: 12 }}>
+                📲 Instalar
+              </button>
+            )}
+            <button onClick={onConfig} title="Configurações" style={{ background: 'transparent', border: '1px solid #334155', color: '#64748b', borderRadius: 10, width: 36, height: 36, cursor: 'pointer', fontSize: 16 }}>
+              ⚙
             </button>
-          )}
+            {view !== 'form' && (
+              <button onClick={onNova} style={{ background: '#6366f1', color: '#fff', border: 'none', borderRadius: 12, padding: '10px 18px', fontWeight: 600, cursor: 'pointer', fontSize: 14 }}>
+                + Nova
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Navegação de mês */}
