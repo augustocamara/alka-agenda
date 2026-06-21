@@ -16,7 +16,7 @@ function mesPadrao() {
 }
 
 export default function App() {
-  const { despesas, carregando, adicionar, adicionarVarias, atualizar, remover, alterarStatus } = useDespesas()
+  const { despesas, carregando, adicionar, adicionarVarias, atualizar, remover, alterarStatus, mesclarTodos, substituirTodos } = useDespesas()
   const { toast, show } = useToast()
   const { canInstall, install, isStandalone } = useInstall()
 
@@ -85,23 +85,14 @@ export default function App() {
     show('Despesa excluída', 'info')
   }
 
-  // Importar JSON (vindo do arquivo antigo ou backup)
-  async function handleImportar(novas) {
-    // Evita duplicar ids que já existem
-    const idsAtuais = new Set(despesas.map(d => d.id))
-    const paraAdicionar = novas.filter(d => !idsAtuais.has(d.id))
-    const duplicadas = novas.length - paraAdicionar.length
+  async function handleMesclar(novas) {
+    await mesclarTodos(novas)
+    show(`${novas.length} despesas mescladas!`)
+  }
 
-    if (paraAdicionar.length === 0) {
-      show('Todos os registros já existem.', 'info')
-      return
-    }
-
-    await adicionarVarias(paraAdicionar)
-    const msg = duplicadas > 0
-      ? `${paraAdicionar.length} importadas, ${duplicadas} já existiam`
-      : `${paraAdicionar.length} despesas importadas!`
-    show(msg)
+  async function handleSubstituir(novas) {
+    await substituirTodos(novas)
+    show(`Substituído! ${novas.length} despesas importadas.`)
   }
 
   // Exportar JSON (backup)
@@ -167,12 +158,14 @@ export default function App() {
       <ConfigModal
         aberto={configAberto}
         onFechar={() => setConfigAberto(false)}
-        onImportar={handleImportar}
+        onMesclar={handleMesclar}
+        onSubstituir={handleSubstituir}
         onExportar={handleExportar}
         canInstall={canInstall}
         install={install}
         isStandalone={isStandalone}
         show={show}
+        totalDespesas={despesas.length}
       />
 
       <Toast toast={toast} />

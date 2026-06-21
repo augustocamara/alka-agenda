@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { dbGetAll, dbPut, dbPutMany, dbDelete } from '../db'
+import { dbGetAll, dbPut, dbPutMany, dbDelete, dbClear } from '../db'
 
 export function useDespesas() {
   const [despesas, setDespesas]     = useState([])
@@ -42,5 +42,21 @@ export function useDespesas() {
     })
   }, [])
 
-  return { despesas, carregando, adicionar, adicionarVarias, atualizar, remover, alterarStatus }
+  const mesclarTodos = useCallback(async (novas) => {
+    // Upsert por ID: atualiza existentes e adiciona novos
+    await dbPutMany(novas)
+    setDespesas(prev => {
+      const mapa = new Map(prev.map(d => [d.id, d]))
+      novas.forEach(d => mapa.set(d.id, d))
+      return [...mapa.values()]
+    })
+  }, [])
+
+  const substituirTodos = useCallback(async (novas) => {
+    await dbClear()
+    await dbPutMany(novas)
+    setDespesas(novas)
+  }, [])
+
+  return { despesas, carregando, adicionar, adicionarVarias, atualizar, remover, alterarStatus, mesclarTodos, substituirTodos }
 }
